@@ -13,9 +13,16 @@ internal static class Native
     public const uint MEM_COMMIT                 = 0x00001000;
     public const uint MEM_RESERVE                = 0x00002000;
     public const uint MEM_RELEASE                = 0x00008000;
+    // Region types returned by VirtualQueryEx MemoryBasicInformation64.Type
+    public const uint MEM_PRIVATE                = 0x00020000;
+    public const uint MEM_MAPPED                 = 0x00040000;
+    public const uint MEM_IMAGE                  = 0x01000000;
     public const uint PAGE_EXECUTE_READWRITE     = 0x40;
     public const uint PAGE_EXECUTE_READ          = 0x20;
+    public const uint PAGE_EXECUTE_WRITECOPY     = 0x80;
     public const uint PAGE_READWRITE             = 0x04;
+    public const uint PAGE_WRITECOPY             = 0x08;
+    public const uint PAGE_READONLY              = 0x02;
     public const uint PAGE_NOACCESS              = 0x01;
     public const uint PAGE_GUARD                 = 0x100;
 
@@ -206,6 +213,16 @@ internal static class Native
     {
         if ((protect & PAGE_NOACCESS) != 0 || (protect & PAGE_GUARD) != 0) return false;
         return (protect & (PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)) != 0;
+    }
+
+    /// <summary>
+    /// True for pages we can write to (heap, private committed data). Used by the
+    /// memory scanner to restrict the value search to the profile object's home.
+    /// </summary>
+    public static bool IsWritable(uint protect)
+    {
+        if ((protect & PAGE_NOACCESS) != 0 || (protect & PAGE_GUARD) != 0) return false;
+        return (protect & (PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)) != 0;
     }
 
     public static void EnableDebugPrivilege()

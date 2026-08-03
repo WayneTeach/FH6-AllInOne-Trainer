@@ -145,6 +145,43 @@ public sealed class RuntimeHookEngine : IDisposable
     public bool   IsExecutableAddressPublic(ulong addr) => IsExecutableAddress(addr);
 
     /// <summary>
+    /// EXPERIMENTAL anti-tamper bypass. FH6 periodically HMAC-SHA256 hashes its .text
+    /// section and on mismatch calls a kill wrapper (push rbx; sub rsp,20; mov ebx,ecx;
+    /// call decision; test al,al; je; ...; call TerminateProcess(GetCurrentProcess,code)).
+    /// We locate that wrapper by AOB and overwrite its first byte with 0xC3 (ret), so every
+    /// kill path through it becomes a no-op. The wrapper is called for its side effect
+    /// (terminate), not its return value, and ret occurs before any stack frame is built,
+    /// so callers continue cleanly. Because the kill is the integrity check's only action,
+    /// neutering it lets .text hooks survive even though the check still detects them.
+    ///
+    /// CAVEATS: this is a single kill path; if a secondary checker or a different kill
+    /// mechanism (abort / __fastfail) fires on the same tamper, hooks may still crash.
+    /// Untested against a live game.
+    /// </summary>
+    public bool DisableIntegrityKill(out string? error)
+    {
+        error = null;
+        if (!IsAttached || _mainBase == 0 || _mainSize <= 0) { error = "Not attached."; return false; }
+
+        var moduleBytes = ReadBytes(_mainBase, _mainSize);
+        if (moduleBytes.Length == 0) { error = "Could not read module."; return false; }
+
+        var sig = "40 53 48 83 EC 20 8B D9 E8 ? ? ? ? 84 C0 74 ? 33 C9 E8 ? ? ? ? FF 15 ? ? ? ? 48 8B C8 8B D3 FF 15";
+        ulong addr = 0;
+        foreach (var off in Pattern.FindAll(moduleBytes, Pattern.Parse(sig), 4))
+        {
+            addr = _mainBase + (ulong)off;
+            break;
+        }
+        if (addr == 0) { error = "Integrity kill-wrapper signature not found (wrong game version?)."; return false; }
+
+        // Atomic 1-byte write via in-process shellcode (same mechanism as hook install).
+        WriteHookAtomic(addr, [0xC3]);
+        L($"Integrity kill-wrapper NEUTRALIZED @ 0x{addr:X} (ret-patched)");
+        return true;
+    }
+
+    /// <summary>
     /// Returns the captured season entity pointer, or null if not yet captured.
     /// The hook fires when the game calls SeasonSettings::Loaded during initialization.
     /// </summary>

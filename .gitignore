@@ -39,3 +39,9 @@ GhidraAnalysis/ghidra_scripts/
 # Misc
 issue*.log
 trainer.log
+
+# Local reverse-engineering / analysis artifacts (not part of the trainer)
+tools/
+issue_logs/
+dumps/
+crash_code_request.md
