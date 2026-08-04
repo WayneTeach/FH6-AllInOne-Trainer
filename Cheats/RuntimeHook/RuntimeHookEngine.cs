@@ -166,19 +166,92 @@ public sealed class RuntimeHookEngine : IDisposable
         var moduleBytes = ReadBytes(_mainBase, _mainSize);
         if (moduleBytes.Length == 0) { error = "Could not read module."; return false; }
 
+        // Locate the live TerminateProcess IAT slot (build-independent). The kill wrapper
+        // is the signature match whose final indirect call targets this slot.
+        var termIat = FindImportIatRva(moduleBytes, "TerminateProcess");
+        if (termIat == 0) { error = "Could not locate TerminateProcess import in live module."; return false; }
+
         var sig = "40 53 48 83 EC 20 8B D9 E8 ? ? ? ? 84 C0 74 ? 33 C9 E8 ? ? ? ? FF 15 ? ? ? ? 48 8B C8 8B D3 FF 15";
+        var pat = Pattern.Parse(sig);
         ulong addr = 0;
-        foreach (var off in Pattern.FindAll(moduleBytes, Pattern.Parse(sig), 4))
+        var candidates = 0;
+        foreach (var off in Pattern.FindAll(moduleBytes, pat, 32))
         {
-            addr = _mainBase + (ulong)off;
-            break;
+            candidates++;
+            // The TerminateProcess call is the FF 15 at signature offset 35 (disp32 at +37,
+            // instruction ends at off+41). Only the real kill wrapper's call lands on the
+            // TerminateProcess IAT slot; false matches point elsewhere.
+            if (off + 41 <= moduleBytes.Length)
+            {
+                var disp = BitConverter.ToInt32(moduleBytes, off + 37);
+                var target = (ulong)((long)off + 41 + disp);
+                if (target == termIat) { addr = _mainBase + (ulong)off; break; }
+            }
         }
-        if (addr == 0) { error = "Integrity kill-wrapper signature not found (wrong game version?)."; return false; }
+
+        if (addr == 0)
+        {
+            error = $"Signature matched {candidates} site(s) but none calls TerminateProcess — not patching (would crash).";
+            L($"Integrity bypass: REFUSED to patch — 0/{candidates} candidates validated.");
+            return false;
+        }
 
         // Atomic 1-byte write via in-process shellcode (same mechanism as hook install).
         WriteHookAtomic(addr, [0xC3]);
-        L($"Integrity kill-wrapper NEUTRALIZED @ 0x{addr:X} (ret-patched)");
+        L($"Integrity kill-wrapper NEUTRALIZED @ 0x{addr:X} (validated TerminateProcess call, {candidates} candidate(s))");
         return true;
+    }
+
+    /// <summary>
+    /// Walks the live module's PE import table and returns the RVA of the IAT slot for the
+    /// named import (0 if not found). The module bytes come from ReadProcessMemory, so an
+    /// index into the array equals an RVA.
+    /// </summary>
+    private static ulong FindImportIatRva(byte[] m, string func)
+    {
+        try
+        {
+            var pe = BitConverter.ToInt32(m, 0x3C);
+            var importRva = BitConverter.ToUInt32(m, pe + 0x90);
+            if (importRva == 0 || importRva >= m.Length) return 0;
+            uint o = importRva;
+            while (o + 20 <= m.Length)
+            {
+                var oft = BitConverter.ToUInt32(m, (int)o);
+                var nameRva = BitConverter.ToUInt32(m, (int)o + 12);
+                var ft = BitConverter.ToUInt32(m, (int)o + 16);
+                if (nameRva == 0 && ft == 0) break;
+                var ilt = oft != 0 ? oft : ft;
+                int i = 0;
+                while ((long)ilt + (i + 1) * 8 <= m.Length)
+                {
+                    var tv = BitConverter.ToUInt64(m, (int)(ilt + i * 8));
+                    if (tv == 0) break;
+                    if ((tv & 0x8000_0000_0000_0000UL) == 0)
+                    {
+                        var nrva = (uint)(tv & 0xFFFFFFFF);
+                        if (nrva > 1 && nrva + 2 < m.Length && ReadAscii(m, nrva + 2) == func)
+                            return ft + (ulong)i * 8;
+                    }
+                    i++;
+                }
+                o += 20;
+            }
+        }
+        catch { /* malformed header */ }
+        return 0;
+    }
+
+    private static string ReadAscii(byte[] m, uint start)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; start + i < m.Length && i < 64; i++)
+        {
+            var c = m[start + i];
+            if (c == 0) break;
+            sb.Append((char)c);
+        }
+        return sb.ToString();
     }
 
     /// <summary>
