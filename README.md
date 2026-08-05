@@ -6,15 +6,15 @@ An all-in-one trainer for **Forza Horizon 6** — car/physics cheats, live SQL a
 
 ## Status
 
-The current release is **v7.2.0** (pre-release, in testing).
+The current release is **v7.3.0** (pre-release, in testing).
 
 **Why profile cheats crash, and what changed.** Forza Horizon 6 periodically hashes its own code section (`.text`). Any modification to that section, whether written externally or by injected shellcode, is detected and the game kills itself cleanly (no crash dump). This is why every hook-based profile cheat has crashed across v6.0–v7.1. The SQL cheats never crash because they only touch newly allocated memory, never `.text`.
 
-**v7.2.0 adds a crash-free Memory Scanner.** Decompilation of the profile getters confirms the values (Credits, Wheelspins, Skill Points, etc.) are stored as **plaintext integers** in memory. The scanner finds a value by scanning, then writes a new one directly to that address. No code hook is involved, so it cannot trigger the integrity scan. Once you've narrowed a value to a single match, **Make Permanent** discovers a static pointer chain to it and saves it — after that it's a one-click address on every future launch, no re-scan needed.
+**v7.3.0 adds a crash-free Memory Finder.** Full decompilation of the game confirms profile values (Credits, Wheelspins, Skill Points, etc.) are stored as **plaintext `int32` at `[obj+8]`**, each with a **guard object pointer at `[obj+0x10]`**. The Finder scans for your current value, then keeps only the matches that have a valid guard pointer 8 bytes later — i.e. the real profile field — and discards display caches. That means it lands on the **canonical address on the first try** (the thing earlier "scanners" missed, causing values to revert). No code hook is involved, so it cannot trigger the integrity scan.
 
-- **Memory Scanner** — crash-free. Find and set any in-game integer (Credits, Wheelspins, Skill Points, XP, and more).
+- **Memory Finder** — crash-free, one-shot. Enter your current value, click **Find Value**, then Set or Lock. Works for Credits, Wheelspins, Super Wheelspins, Skill Points, XP, and any integer.
 - **SQL cheats** (Free Cars, Autoshow, Add All Cars, etc.) continue to work across all versions.
-- **Profile value toggles and physics hooks** (Drift multiplier, No Skill Break, etc.) still install `.text` hooks and **can crash the game**. They are left in for experimentation; use the Memory Scanner for the values they control.
+- **Profile value toggles and physics hooks** (Drift multiplier, No Skill Break, etc.) install `.text` hooks and **will crash the game**. The experimental bypass that tried to neutralize the integrity check was **removed** — it crashed testers in v7.2.0 and v7.2.1 (the signature matched several `TerminateProcess` wrappers and patched the wrong one). Use the Memory Finder for those values.
 
 ## Download
 
@@ -24,9 +24,10 @@ Latest release: **[GitHub Releases](../../releases)** — download the `.zip`, e
 
 1. Start Forza Horizon 6 and **load fully into the world** (be driving, not in a menu).
 2. Launch the trainer as Administrator and attach.
-3. Enable the cheats you want, then play.
+3. To edit money/spins/points: open the **Memory Finder**, enter your exact current value, click **Find Value**, then enter the amount you want and **Set** (or **Lock** to keep it applied).
+4. SQL cheats (cars, upgrades, etc.) are on the Database tab — one click.
 
-> Enable cheats only once you are fully in-game.
+> Enable cheats only once you are fully in-game. Offline mode only.
 
 ## Features
 
@@ -39,17 +40,15 @@ Latest release: **[GitHub Releases](../../releases)** — download the `.zip`, e
 ### Physics & Performance (SQL)
 - Drift Score 10x, Max Traction, Torque 2x, Reduce Drag 0.5x
 
-### Memory Scanner (crash-free)
-- Find and set any in-game integer by value, no code hooks
-- First Scan / Next Scan (exact, increased, decreased, changed, unchanged) narrowing
-- Set a value once, or Lock it to keep re-applying
-- **Make Permanent** — once narrowed to one match, the trainer discovers a static pointer chain to it and saves it. The value then resolves one-click on every future launch with no re-scan (ASLR-safe). Saved under **Permanent Addresses**.
-- The recommended way to edit Credits, Wheelspins, Super Wheelspins, Skill Points, and XP
+### Memory Finder (crash-free, one-shot)
+- **Find Value** — enter your current in-game number; the trainer scans then keeps only the canonical profile field (valid guard pointer at +8), discarding display caches. Correct on the first try.
+- Set a value once, or **Lock** it to keep re-applying.
+- Manual First Scan / Next Scan filters are still available for edge cases.
+- The recommended way to edit Credits, Wheelspins, Super Wheelspins, Skill Points, and XP.
 
-### Profile Values (runtime hooks — may crash)
-- Credits, Wheelspins, Super Wheelspins, Skill Points
-- Drift Score Multiplier, No Skill Break, Sell Payout
-- These install `.text` hooks and can trigger the game's integrity scan. Prefer the Memory Scanner for the values above.
+### Profile Values & Physics (runtime hooks — will crash)
+- Credits, Wheelspins, Super Wheelspins, Skill Points, Drift Score Multiplier, No Skill Break, Sell Payout.
+- These install `.text` hooks and **crash FH6**. No working bypass exists, so they are disabled/unsafe. Use the Memory Finder for the values above.
 
 ### Quick Actions
 - **Quick Start** — 999M Credits + Free Cars + Autoshow Unlock + Install Flags + All Cars

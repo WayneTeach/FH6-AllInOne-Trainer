@@ -178,6 +178,19 @@ public sealed class CheatService : IDisposable
         return n;
     }
 
+    /// <summary>
+    /// One-shot canonical-value finder: scan for the value, then keep only matches that are
+    /// real profile fields (valid guard pointer at [addr+8]). Result is the canonical address
+    /// on the first try — no repeated narrowing. Crash-free (read + data write only).
+    /// </summary>
+    public int FindValue(int value)
+    {
+        if (!EnsureAttached()) return -1;
+        var n = _scanner.FindCanonicalValue(value, msg => _log.Info(msg));
+        _log.Info($"FindValue: {value} -> {n} canonical match(es)");
+        return n;
+    }
+
     public int ScanExact(int value)
     {
         if (!EnsureAttached()) return -1;
@@ -240,18 +253,13 @@ public sealed class CheatService : IDisposable
     /// </summary>
     public bool BypassIntegrity()
     {
-        if (!EnsureAttached()) return false;
-        if (_integrityBypassed) { LastError = null; return true; }
-        if (!_engine.DisableIntegrityKill(out var err))
-        {
-            LastError = err ?? "Integrity bypass failed.";
-            _log.Error($"Integrity bypass failed: {LastError}");
-            return false;
-        }
-        _integrityBypassed = true;
-        _log.Info("Integrity bypass ACTIVE (kill wrapper ret-patched). Hook cheats may now survive.");
-        LastError = null;
-        return true;
+        // Disabled: the signature matches several TerminateProcess wrappers, and ret-patching
+        // the wrong one crashed the game instantly for users across v7.2.0 and v7.2.1. The
+        // crash-free Memory Finder (FindValue) is the supported path. Left as a no-op so the
+        // toggle can't crash anyone.
+        LastError = "Integrity bypass is disabled — it crashed the game for testers. Use the Memory Finder instead.";
+        _log.Info("Integrity bypass refused (disabled — caused crashes in v7.2.0/v7.2.1).");
+        return false;
     }
 
     // ===== Pointer chains (permanent, ASLR-safe addresses) =====

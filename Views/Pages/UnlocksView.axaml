@@ -42,11 +42,15 @@
                     <TextBlock Classes="hint" TextWrapping="Wrap"
                                Text="Find any in-game number and set it without code hooks, so it cannot crash FH6. Works for Credits, Wheelspins, Skill Points, XP, and any integer value." />
 
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
                         <TextBlock Grid.Column="0" Text="Value" VerticalAlignment="Center" FontSize="12" />
                         <TextBox Grid.Column="1" Text="{Binding ScanValueText}"
                                  PlaceholderText="enter the exact value you see in-game now" />
-                        <Button Grid.Column="2" Classes="primary" Content="First Scan" Padding="14,6"
+                        <Button Grid.Column="2" Classes="primary" Content="Find Value" Padding="14,6"
+                                ToolTip.Tip="One-shot: find the canonical address (recommended) and discard display caches"
+                                Command="{Binding FindValueCommand}" IsEnabled="{Binding !IsScanning}" />
+                        <Button Grid.Column="3" Classes="ghost-sm" Content="First Scan" Padding="10,6"
+                                ToolTip.Tip="Manual first scan only (advanced)"
                                 Command="{Binding FirstScanCommand}" IsEnabled="{Binding !IsScanning}" />
                     </Grid>
 
@@ -100,7 +104,7 @@
                     </Border>
 
                     <TextBlock Classes="hint" Margin="0" TextWrapping="Wrap"
-                               Text="How to use: enter your current value, First Scan. Change that value in-game (earn or spend), enter the new value, Next = Value. Repeat until 1 match. Then enter the amount you want and Set, or Make Permanent so you never scan for it again." />
+                               Text="How to use: enter your current in-game value, click Find Value. It scans then keeps only the real profile field (the one with a valid guard pointer), discarding display caches — so you usually get the correct canonical address first try. Then enter the amount you want and Set, or Lock to keep it applied. Only use First Scan + the filters if Find Value returns nothing." />
                 </StackPanel>
             </Border>
 
@@ -141,24 +145,9 @@
                 <StackPanel Spacing="10">
                     <TextBlock Text="PROFILE VALUES" Classes="section-header" />
 
-                    <!-- Experimental integrity bypass: enables the hooks below -->
-                    <Border Background="#26E53935" BorderBrush="#E53935" BorderThickness="1" CornerRadius="6" Padding="8,6">
-                        <StackPanel Spacing="6">
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                <TextBlock Grid.Column="0" Text="EXPERIMENTAL: Bypass Integrity Check" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource TextPrimary}" />
-                                <ToggleSwitch Grid.Column="1" VerticalAlignment="Center"
-                                              IsChecked="{Binding IsIntegrityBypassOn, Mode=OneWay}"
-                                              IsEnabled="{Binding CanToggle}"
-                                              Command="{Binding ToggleIntegrityBypassCommand}" />
-                            </Grid>
-                            <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}"
-                                       Text="FH6 hashes its own code and kills the process when a hook is detected. This neutralizes that kill path so the hook cheats below MIGHT work. Experimental and untested: a secondary checker could still crash the game. Turn this ON first, then test ONE hook cheat (e.g. Credits). The Memory Scanner above does not need this." />
-                        </StackPanel>
-                    </Border>
-
                     <Border Background="#26FFB000" BorderBrush="#FFB000" BorderThickness="1" CornerRadius="6" Padding="8,5">
                         <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}"
-                                   Text="These install code hooks. They crash unless the red Experimental Bypass above is active. Turn that on first, then test one cheat. For crash-free value editing, use the Memory Scanner at the top instead." />
+                                   Text="These install code hooks and will crash FH6. There is no working bypass (it crashed testers in v7.2.0 and v7.2.1), so the bypass was removed. For working, crash-free value editing, use the Memory Finder at the top of this page." />
                     </Border>
 
                     <!-- Credits -->

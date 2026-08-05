@@ -49,9 +49,6 @@ public partial class UnlocksViewModel : PageViewModelBase
     [ObservableProperty] private string _driftMultiText = "10";
     [ObservableProperty] private bool _isNoSkillBreakOn;
 
-    // --- Experimental integrity bypass (enables hook cheats) ---
-    [ObservableProperty] private bool _isIntegrityBypassOn;
-
     // --- Memory scanner (crash-free value finder) ---
     [ObservableProperty] private string _scanValueText = "";
     [ObservableProperty] private string _scanResultText = "No scan yet. Enter your current in-game value and press First Scan.";
@@ -266,25 +263,6 @@ public partial class UnlocksViewModel : PageViewModelBase
         IsNoSkillBreakOn = _cheats.IsActive(RuntimeProfileFeature.NoSkillBreak);
     }
 
-    // ===== Experimental: bypass FH6's .text integrity kill so hooks survive =====
-    [RelayCommand]
-    private void ToggleIntegrityBypass()
-    {
-        if (!_cheats.IsIntegrityBypassed)
-        {
-            var ok = _cheats.BypassIntegrity();
-            IsIntegrityBypassOn = _cheats.IsIntegrityBypassed;
-            SetStatus(ok, ok
-                ? "Integrity bypass ON. Hook cheats (Credits, Wheelspins, Drift...) may now work. Test ONE first."
-                : _cheats.LastError);
-        }
-        else
-        {
-            SetStatus(false, "Bypass stays active until FH6 restarts. Leave it on and test a hook.");
-            IsIntegrityBypassOn = _cheats.IsIntegrityBypassed;
-        }
-    }
-
     // ===== Memory Scanner (crash-free value editing) =====
     // Finds an in-game number by value, then writes a new one directly to memory.
     // No code hooks, so it cannot trigger the integrity scan that crashes the game.
@@ -311,6 +289,29 @@ public partial class UnlocksViewModel : PageViewModelBase
             var n = await System.Threading.Tasks.Task.Run(() => _cheats.ScanFirst(value));
             RefreshScanResult(n);
             SetStatus(n >= 0, n > 0 ? $"First scan: {n} matches." : "No matches for that value.");
+        }
+        finally { IsScanning = false; }
+    }
+
+    /// <summary>
+    /// One-shot canonical finder: scans for the value, then keeps only real profile fields
+    /// (valid guard pointer at +8). Aims to return the correct canonical address on the first
+    /// try so Set/Lock sticks, with no repeated narrowing.
+    /// </summary>
+    [RelayCommand]
+    private async Task FindValueAsync()
+    {
+        if (!CanToggle) { SetStatus(false, "FH6 is not running."); return; }
+        var value = Parse(ScanValueText, 0);
+        IsScanning = true;
+        ScanResultText = "Finding canonical value (scan + profile-field filter, a few seconds)...";
+        try
+        {
+            var n = await System.Threading.Tasks.Task.Run(() => _cheats.FindValue(value));
+            RefreshScanResult(n);
+            SetStatus(n >= 0, n > 0
+                ? $"Found {n} canonical match(es). Enter the amount you want and Set (or Lock)."
+                : "No canonical match. Double-check the value, or use First Scan + filters.");
         }
         finally { IsScanning = false; }
     }
