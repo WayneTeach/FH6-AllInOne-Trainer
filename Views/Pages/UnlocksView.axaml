@@ -140,6 +140,23 @@
                 </StackPanel>
             </Border>
 
+            <!-- Instant reward grants (no-scan: calls the game's grant function directly) -->
+            <Border Classes="card">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="INSTANT REWARDS (AUTO)" Classes="section-header" />
+                    <TextBlock Classes="hint" TextWrapping="Wrap"
+                               Text="Calls the game's own reward-grant function directly (no scanning, no value typing, no code hooks). Enter an amount and click. Crash-free by design — only reads the target and calls the grant. Experimental, v403 build only." />
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Text="Amount" VerticalAlignment="Center" FontSize="12" />
+                        <TextBox Grid.Column="1" Text="{Binding GrantAmountText}" />
+                        <Button Grid.Column="2" Classes="primary" Content="Wheelspins" Padding="12,6"
+                                Command="{Binding GrantWheelspinsCommand}" IsEnabled="{Binding CanToggle}" />
+                        <Button Grid.Column="3" Classes="primary" Content="Super Wheelspins" Padding="12,6"
+                                Command="{Binding GrantSuperWheelspinsCommand}" IsEnabled="{Binding CanToggle}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
             <!-- Profile Values card -->
             <Border Classes="card">
                 <StackPanel Spacing="10">

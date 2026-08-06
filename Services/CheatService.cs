@@ -17,6 +17,7 @@ public sealed class CheatService : IDisposable
     private readonly SeasonChanger _season;
     private readonly MemoryScanner _scanner;
     private readonly PointerScanner _pointerScan;
+    private readonly RewardCaller _reward;
     private readonly List<SavedPointerStore.Entry> _savedPointers;
     private readonly Dictionary<int, System.Threading.CancellationTokenSource> _chainLocks = new();
     private readonly HashSet<RuntimeProfileFeature> _active = new();
@@ -37,6 +38,7 @@ public sealed class CheatService : IDisposable
         _season = new SeasonChanger(_engine);
         _scanner = new MemoryScanner(_engine);
         _pointerScan = new PointerScanner(_engine);
+        _reward = new RewardCaller(_engine);
         _savedPointers = SavedPointerStore.Load();
         _engine.SetLogCallback(msg => _log.Info(msg));
         _game.StatusChanged += OnGameStatusChanged;
@@ -190,6 +192,25 @@ public sealed class CheatService : IDisposable
         _log.Info($"FindValue: {value} -> {n} canonical match(es)");
         return n;
     }
+
+    // ===== Instant reward grants (Phorza-style: call the game's grant function via shellcode) =====
+
+    private bool GrantReward(int type, int amount, string label)
+    {
+        if (!EnsureAttached()) return false;
+        if (!_reward.Grant(type, amount, out var err))
+        {
+            LastError = err ?? $"{label} grant failed.";
+            _log.Error($"{label} grant: {LastError}");
+            return false;
+        }
+        _log.Info($"Granted {amount} {label} (reward grant, type={type})");
+        LastError = null;
+        return true;
+    }
+
+    public bool GrantWheelspins(int amount) => GrantReward(0, amount, "Wheelspins");
+    public bool GrantSuperWheelspins(int amount) => GrantReward(1, amount, "Super Wheelspins");
 
     public int ScanExact(int value)
     {

@@ -56,6 +56,7 @@ public partial class UnlocksViewModel : PageViewModelBase
     [ObservableProperty] private bool _isScanning;
     [ObservableProperty] private bool _isScanLockOn;
     [ObservableProperty] private string _permanentLabelText = "Credits";
+    [ObservableProperty] private string _grantAmountText = "100";
 
     // Saved permanent addresses (pointer chains). Persisted; resolved fresh each launch.
     public ObservableCollection<SavedPointerItemVm> SavedChains { get; } = new();
@@ -374,6 +375,23 @@ public partial class UnlocksViewModel : PageViewModelBase
         IsScanLockOn = _cheats.IsScanLockActive;
         ScanResultText = "Scan reset. Enter a value and press First Scan.";
         SetStatus(true, "Scan reset.");
+    }
+
+    // ===== Instant reward grants (call the game's grant function — no scanning) =====
+    [RelayCommand]
+    private void GrantWheelspins()
+    {
+        var v = Parse(GrantAmountText, 100);
+        var ok = _cheats.GrantWheelspins(v);
+        SetStatus(ok, ok ? $"Granted {v} wheelspins." : _cheats.LastError);
+    }
+
+    [RelayCommand]
+    private void GrantSuperWheelspins()
+    {
+        var v = Parse(GrantAmountText, 100);
+        var ok = _cheats.GrantSuperWheelspins(v);
+        SetStatus(ok, ok ? $"Granted {v} super wheelspins." : _cheats.LastError);
     }
 
     /// <summary>
