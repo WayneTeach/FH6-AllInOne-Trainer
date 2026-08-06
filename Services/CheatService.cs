@@ -189,13 +189,16 @@ public sealed class CheatService : IDisposable
 
     private bool GrantReward(int type, int amount, string label)
     {
-        // Disabled: the hardcoded dump RVAs don't match the live build (crashed on click in
-        // #175, same dump-vs-live mismatch as the kill-wrapper). Must AOB-resolve the grant
-        // functions against the live module before this is safe to call again. Refusing now
-        // to prevent crashes.
-        LastError = "Instant Rewards is disabled — it crashed on the live build. Awaiting an AOB rebuild that finds the functions dynamically.";
-        _log.Info($"GrantReward({label}) refused — disabled until AOB-resolved (dump RVAs crashed #175).");
-        return false;
+        if (!EnsureAttached()) return false;
+        if (!_reward.Grant(type, amount, out var err))
+        {
+            LastError = err ?? $"{label} grant failed.";
+            _log.Error($"{label} grant: {LastError}");
+            return false;
+        }
+        _log.Info($"Granted {amount} {label} (AOB-resolved reward grant, type={type})");
+        LastError = null;
+        return true;
     }
 
     public bool GrantWheelspins(int amount) => GrantReward(0, amount, "Wheelspins");
