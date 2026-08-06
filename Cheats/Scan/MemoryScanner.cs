@@ -150,16 +150,14 @@ public sealed class MemoryScanner
     }
 
     /// <summary>
-    /// One-shot canonical-value finder. Scans for <paramref name="value"/>, then keeps only
-    /// matches that look like a real profile field (a valid guard pointer at [addr+8], per
-    /// the getter decompilation: value at [obj+8], guard object at [obj+0x10]). This discards
-    /// the display caches that cause written values to revert, so the result is the canonical
-    /// address on the first try — no repeated narrowing. Returns the remaining match count.
+    /// One-shot value finder. Scans for <paramref name="value"/>. (The structural
+    /// [addr+8]-guard filter was removed — on the live build it filtered out the real value
+    /// too and returned 0 matches, per #175. Plain first-scan is more reliable; narrow with
+    /// the Next Scan buttons if there are multiple matches.)
     /// </summary>
     public int FindCanonicalValue(int value, Action<string>? onProgress = null)
     {
-        FirstScan(value, onProgress);
-        return NextScanProfileField();
+        return FirstScan(value, onProgress);
     }
 
     /// <summary>
