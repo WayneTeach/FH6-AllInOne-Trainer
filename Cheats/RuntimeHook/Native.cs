@@ -225,6 +225,24 @@ internal static class Native
         return (protect & (PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)) != 0;
     }
 
+    // ===== Thread context (for hijacking game threads to call TLS-dependent functions) =====
+
+    public const uint CONTEXT_ALL = 0x10001B;
+    public const int CONTEXT_X64_SIZE = 1232;
+    public const int OFF_CTX_FLAGS = 0x30;
+    public const int OFF_CTX_RSP = 0x98;
+    public const int OFF_CTX_RIP = 0xF8;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool GetThreadContext(IntPtr hThread, IntPtr lpContext);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetThreadContext(IntPtr hThread, IntPtr lpContext);
+
+    public const uint THREAD_GET_CONTEXT = 0x0008;
+    public const uint THREAD_SET_CONTEXT = 0x0010;
+    public const uint THREAD_QUERY_INFORMATION = 0x0040;
+
     public static void EnableDebugPrivilege()
     {
         if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, out var token))

@@ -32,6 +32,7 @@ public sealed class RuntimeHookEngine : IDisposable
 
     private Action<string>? _onLog;
     public bool IsAttached => _handle != IntPtr.Zero && _process is { HasExited: false };
+    public int? Pid => _process is { HasExited: false } p ? p.Id : null;
     public List<string> Log { get; } = new();
     public void SetLogCallback(Action<string> onLog) => _onLog = onLog;
 
