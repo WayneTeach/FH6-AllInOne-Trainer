@@ -145,7 +145,7 @@
                 <StackPanel Spacing="10">
                     <TextBlock Text="INSTANT REWARDS (AUTO)" Classes="section-header" />
                     <TextBlock Classes="hint" TextWrapping="Wrap"
-                               Text="Calls the game's own reward-grant function directly (no scanning, no value typing, no code hooks). Enter an amount and click. Crash-free by design — only reads the target and calls the grant. Experimental, v403 build only." />
+                               Text="Finds the reward wallet in the game's memory (one safe function call) then sets the value directly (data write, no hooks, no crash). Enter the count you want and click." />
                     <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
                         <TextBlock Grid.Column="0" Text="Amount" VerticalAlignment="Center" FontSize="12" />
                         <TextBox Grid.Column="1" Text="{Binding GrantAmountText}" />

@@ -190,13 +190,13 @@ public sealed class CheatService : IDisposable
     private bool GrantReward(int type, int amount, string label)
     {
         if (!EnsureAttached()) return false;
-        if (!_reward.Grant(type, amount, out var err))
+        if (!_reward.SetReward(type, amount, out var err))
         {
-            LastError = err ?? $"{label} grant failed.";
-            _log.Error($"{label} grant: {LastError}");
+            LastError = err ?? $"{label} failed.";
+            _log.Error($"{label}: {LastError}");
             return false;
         }
-        _log.Info($"Granted {amount} {label} (AOB-resolved reward grant, type={type})");
+        _log.Info($"Set {label} to {amount} (wallet data-write, type={type})");
         LastError = null;
         return true;
     }
