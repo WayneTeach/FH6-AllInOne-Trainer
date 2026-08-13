@@ -49,6 +49,10 @@ public partial class UnlocksViewModel : PageViewModelBase
     [ObservableProperty] private string _driftMultiText = "10";
     [ObservableProperty] private bool _isNoSkillBreakOn;
 
+    // --- Time of Day ---
+    [ObservableProperty] private bool _isTimeOfDayOn;
+    [ObservableProperty] private string _timeOfDayText = "12.0";
+
     // --- Memory scanner (crash-free value finder) ---
     [ObservableProperty] private string _scanValueText = "";
     [ObservableProperty] private string _scanResultText = "No scan yet. Enter your current in-game value and press First Scan.";
@@ -263,6 +267,17 @@ public partial class UnlocksViewModel : PageViewModelBase
         Toggle(RuntimeProfileFeature.NoSkillBreak, on, 0, "No Skill Break");
         IsNoSkillBreakOn = _cheats.IsActive(RuntimeProfileFeature.NoSkillBreak);
     }
+
+    // ===== Time of Day =====
+    [RelayCommand] private void ToggleTimeOfDay()
+    {
+        var on = !_cheats.IsActive(RuntimeProfileFeature.TimeOfDay);
+        Toggle(RuntimeProfileFeature.TimeOfDay, on, ParseFloatAsIntBits(TimeOfDayText, 12f), "Time of Day");
+        IsTimeOfDayOn = _cheats.IsActive(RuntimeProfileFeature.TimeOfDay);
+    }
+    [RelayCommand] private void ApplyTimeOfDay()
+        => ApplyValue(RuntimeProfileFeature.TimeOfDay, ParseFloatAsIntBits(TimeOfDayText, 12f), "Time of Day");
+    [RelayCommand] private void SetTimeOfDay(string? a) { if (a is not null) { TimeOfDayText = a; if (IsTimeOfDayOn) ApplyTimeOfDay(); } }
 
     // ===== Memory Scanner (crash-free value editing) =====
     // Finds an in-game number by value, then writes a new one directly to memory.
