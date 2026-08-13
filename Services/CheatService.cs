@@ -60,7 +60,6 @@ public sealed class CheatService : IDisposable
             _season.Reset();
             _scanner.Reset();
             StopAllChainLocks();
-            _integrityBypassed = false;
             try { _engine.Detach(); }
             catch (Exception ex) { LastError = $"Detach on game-exit failed: {ex.Message}"; _log.Error($"Detach failed: {ex.Message}"); }
         }
@@ -260,27 +259,6 @@ public sealed class CheatService : IDisposable
     }
 
     public void ScannerReset() { _scanner.Reset(); _log.Info("Scan: reset"); }
-
-    // ===== Experimental integrity bypass (enables hooks) =====
-
-    private bool _integrityBypassed;
-    public bool IsIntegrityBypassed => _integrityBypassed;
-
-    /// <summary>
-    /// Neutralize FH6's .text integrity kill path so code hooks can survive. Experimental:
-    /// patches one kill wrapper; a secondary checker or different kill mechanism could still
-    /// crash the game. Call before enabling any hook-based cheat.
-    /// </summary>
-    public bool BypassIntegrity()
-    {
-        // Disabled: the signature matches several TerminateProcess wrappers, and ret-patching
-        // the wrong one crashed the game instantly for users across v7.2.0 and v7.2.1. The
-        // crash-free Memory Finder (FindValue) is the supported path. Left as a no-op so the
-        // toggle can't crash anyone.
-        LastError = "Integrity bypass is disabled — it crashed the game for testers. Use the Memory Finder instead.";
-        _log.Info("Integrity bypass refused (disabled — caused crashes in v7.2.0/v7.2.1).");
-        return false;
-    }
 
     // ===== Pointer chains (permanent, ASLR-safe addresses) =====
 

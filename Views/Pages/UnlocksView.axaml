@@ -47,7 +47,7 @@
                         <TextBox Grid.Column="1" Text="{Binding ScanValueText}"
                                  PlaceholderText="enter the exact value you see in-game now" />
                         <Button Grid.Column="2" Classes="primary" Content="Find Value" Padding="14,6"
-                                ToolTip.Tip="One-shot: find the canonical address (recommended) and discard display caches"
+                                ToolTip.Tip="Scan for your current value (recommended first step)"
                                 Command="{Binding FindValueCommand}" IsEnabled="{Binding !IsScanning}" />
                         <Button Grid.Column="3" Classes="ghost-sm" Content="First Scan" Padding="10,6"
                                 ToolTip.Tip="Manual first scan only (advanced)"
@@ -104,7 +104,7 @@
                     </Border>
 
                     <TextBlock Classes="hint" Margin="0" TextWrapping="Wrap"
-                               Text="How to use: enter your current in-game value, click Find Value. It scans then keeps only the real profile field (the one with a valid guard pointer), discarding display caches — so you usually get the correct canonical address first try. Then enter the amount you want and Set, or Lock to keep it applied. Only use First Scan + the filters if Find Value returns nothing." />
+                               Text="How to use: enter your current in-game value, click Find Value. If you get several matches, change the value in-game and use the Next Scan filters (Increased/Decreased/Changed/Exact) to narrow to one. Then enter the amount you want and Set, or Lock to keep it applied." />
                 </StackPanel>
             </Border>
 
@@ -162,9 +162,9 @@
                 <StackPanel Spacing="10">
                     <TextBlock Text="PROFILE VALUES" Classes="section-header" />
 
-                    <Border Background="#26FFB000" BorderBrush="#FFB000" BorderThickness="1" CornerRadius="6" Padding="8,5">
+                    <Border Background="#1A3DDC97" BorderBrush="#3DDC97" BorderThickness="1" CornerRadius="6" Padding="8,5">
                         <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}"
-                                   Text="These install code hooks and will crash FH6. There is no working bypass (it crashed testers in v7.2.0 and v7.2.1), so the bypass was removed. For working, crash-free value editing, use the Memory Finder at the top of this page." />
+                                   Text="Toggle ON to enable. The CRC bypass protects these hooks automatically." />
                     </Border>
 
                     <!-- Credits -->

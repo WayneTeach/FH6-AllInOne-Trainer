@@ -26,7 +26,6 @@ public sealed class MemoryScanner
     private readonly RuntimeHookEngine _engine;
     private readonly byte[] _chunk = new byte[ChunkSize];
     private readonly byte[] _single = new byte[ValueSize];
-    private readonly byte[] _u8 = new byte[8];
 
     // Current candidate addresses (narrowed across successive scans).
     private readonly List<ulong> _addresses = new();
@@ -114,30 +113,6 @@ public sealed class MemoryScanner
     {
         if (!Ready()) return 0;
         Filter(addr => _snapshot.TryGetValue(addr, out var old) && ReadInt(addr) == old);
-        Snapshot();
-        return _addresses.Count;
-    }
-
-    /// <summary>
-    /// Refine: keep only candidates whose [addr+8] is a valid pointer. Decompilation of
-    /// the profile getters shows the value lives at [obj+8] and the guard/lock object sits
-    /// at [obj+0x10] = [addr+8] — always a real pointer. Bare display caches (plain int32s
-    /// the scanner tends to land on) usually do NOT have a valid pointer 8 bytes after
-    /// them, so this isolates the canonical profile value and is what makes a written
-    /// Credits/Wheelspins value actually stick instead of reverting on purchase.
-    /// </summary>
-    public int NextScanProfileField()
-    {
-        if (!Ready()) return 0;
-        var handle = _engine.HandlePublic;
-        var mbiSize = (UIntPtr)Marshal.SizeOf<Native.MemoryBasicInformation64>();
-        Filter(addr =>
-        {
-            var p = ReadUInt64At(addr + 8);
-            if (p == 0) return false;
-            if (Native.VirtualQueryEx(handle, (UIntPtr)p, out var mbi, mbiSize) == UIntPtr.Zero) return false;
-            return mbi.State == Native.MEM_COMMIT && Native.IsReadable(mbi.Protect);
-        });
         Snapshot();
         return _addresses.Count;
     }
@@ -301,8 +276,4 @@ public sealed class MemoryScanner
 
     private int ReadInt(ulong addr)
         => ReadFour(addr, _single) ? BitConverter.ToInt32(_single, 0) : 0;
-
-    private ulong ReadUInt64At(ulong addr)
-        => Native.ReadProcessMemory(_engine.HandlePublic, new IntPtr((long)addr), _u8, (UIntPtr)8, out var r) && (ulong)r == 8
-            ? BitConverter.ToUInt64(_u8, 0) : 0UL;
 }
