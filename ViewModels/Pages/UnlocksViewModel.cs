@@ -53,6 +53,9 @@ public partial class UnlocksViewModel : PageViewModelBase
     [ObservableProperty] private bool _isTimeOfDayOn;
     [ObservableProperty] private string _timeOfDayText = "12.0";
 
+    // --- Season ---
+    [ObservableProperty] private int _selectedSeason;
+
     // --- Memory scanner (crash-free value finder) ---
     [ObservableProperty] private string _scanValueText = "";
     [ObservableProperty] private string _scanResultText = "No scan yet. Enter your current in-game value and press First Scan.";
@@ -278,6 +281,22 @@ public partial class UnlocksViewModel : PageViewModelBase
     [RelayCommand] private void ApplyTimeOfDay()
         => ApplyValue(RuntimeProfileFeature.TimeOfDay, ParseFloatAsIntBits(TimeOfDayText, 12f), "Time of Day");
     [RelayCommand] private void SetTimeOfDay(string? a) { if (a is not null) { TimeOfDayText = a; if (IsTimeOfDayOn) ApplyTimeOfDay(); } }
+
+    // ===== Season =====
+    [RelayCommand]
+    private void SetSeasonToSpring() { SetSeasonValue(0, "Spring"); }
+    [RelayCommand]
+    private void SetSeasonToSummer() { SetSeasonValue(1, "Summer"); }
+    [RelayCommand]
+    private void SetSeasonToAutumn() { SetSeasonValue(2, "Autumn"); }
+    [RelayCommand]
+    private void SetSeasonToWinter() { SetSeasonValue(3, "Winter"); }
+
+    private void SetSeasonValue(int season, string label)
+    {
+        var ok = _cheats.SetSeason(season, out var err);
+        SetStatus(ok, ok ? $"Season set to {label}." : err);
+    }
 
     // ===== Memory Scanner (crash-free value editing) =====
     // Finds an in-game number by value, then writes a new one directly to memory.

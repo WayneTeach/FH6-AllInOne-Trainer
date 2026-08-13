@@ -316,6 +316,25 @@
                 </StackPanel>
             </Border>
 
+            <!-- Season card -->
+            <Border Classes="card">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="SEASON" Classes="section-header" />
+                    <TextBlock Classes="hint" TextWrapping="Wrap"
+                               Text="Change the in-game season instantly. Click a season button to apply." />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Classes="primary" Content="Spring" Padding="14,6"
+                                Command="{Binding SetSeasonToSpringCommand}" IsEnabled="{Binding CanToggle}" />
+                        <Button Classes="primary" Content="Summer" Padding="14,6"
+                                Command="{Binding SetSeasonToSummerCommand}" IsEnabled="{Binding CanToggle}" />
+                        <Button Classes="primary" Content="Autumn" Padding="14,6"
+                                Command="{Binding SetSeasonToAutumnCommand}" IsEnabled="{Binding CanToggle}" />
+                        <Button Classes="primary" Content="Winter" Padding="14,6"
+                                Command="{Binding SetSeasonToWinterCommand}" IsEnabled="{Binding CanToggle}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- Log card -->
             <Border Classes="card">
                 <StackPanel Spacing="6">

@@ -12,9 +12,8 @@ namespace FH6Mod.Cheats.Season;
 /// stores it to a known location we can read.
 ///
 /// Season enum: 0=Spring, 1=Summer, 2=Autumn, 3=Winter
-/// Entity layout:
-///   +0x278 = Season value (int32: 0-3)
-///   +0x280 = Related pointer
+/// Entity layout (verified from v403 decompile):
+///   +0x174 = Season value (int32: 0-3) [getter at L3089903, setter at L2558535]
 ///   +0x2D8 = Visual update flag 1
 ///   +0x2D9 = Visual update flag 2
 ///   +0x2DA = Visual update flag 3
@@ -22,7 +21,7 @@ namespace FH6Mod.Cheats.Season;
 public sealed class SeasonChanger
 {
     private readonly RuntimeHookEngine _engine;
-    private const int SeasonValueOffset = 0x278;
+    private const int SeasonValueOffset = 0x174;
 
     public enum FHSeason
     {
