@@ -29,6 +29,11 @@ public sealed class RuntimeHookEngine : IDisposable
     private ulong _mainBase;
     private int _mainSize;
     private bool _crcBypassActive;
+    private ulong _crcFunctionPointerAddress;
+    private ulong _crcOriginalPointer;
+    private ulong _crcRetAddress;
+    private Timer? _crcTimer;
+    private int _crcTimerRunning;
 
     private Action<string>? _onLog;
     public bool IsAttached => _handle != IntPtr.Zero && _process is { HasExited: false };
@@ -333,6 +338,9 @@ public sealed class RuntimeHookEngine : IDisposable
     /// </summary>
     public void Detach()
     {
+        StopCrcTimer();
+        RestoreCrcPointer();
+
         RestoreRuntimeProfileHooks();
 
         _preResolved = false;
@@ -716,10 +724,90 @@ public sealed class RuntimeHookEngine : IDisposable
             throw new InvalidOperationException("Main module not captured.");
 
         var bytes = ReadBytes(_mainBase, _mainSize);
-        if (bytes.Length == 0) throw new InvalidOperationException("Could not read main module.");
+        if (bytes.Length == 0) throw new InvalidOperationException("Could not read main module for CRC bypass.");
 
+        var retOff = FindFirstExecutablePatternOffset(bytes, "C3");
+        if (retOff < 0) throw new InvalidOperationException("CRC bypass ret-stub not found.");
+
+        var crcOff = FindFirstPatternOffset(bytes, "48 8B D9 48 8D 05 ? ? ? ? 48 89 01 E8 ? ? ? ? 48 8B CB 48 83 C4 20 5B E9");
+        if (crcOff < 0) throw new InvalidOperationException("CRC bypass signature not found (FH6 likely updated).");
+
+        var sigAddr = _mainBase + (ulong)crcOff;
+        var leaStart = sigAddr + 3;
+        var leaDisp = ReadInt32(leaStart + 3);
+        var tableBase = leaStart + 7 + (ulong)leaDisp;
+        var fnPtrAddr = tableBase + 48;
+        var origFnPtr = ReadUInt64(fnPtrAddr);
+        if (origFnPtr == 0) throw new InvalidOperationException("CRC function pointer is zero.");
+        var retAddr = _mainBase + (ulong)retOff;
+
+        WriteUInt64(fnPtrAddr, retAddr);
+        _crcFunctionPointerAddress = fnPtrAddr;
+        _crcOriginalPointer = origFnPtr;
+        _crcRetAddress = retAddr;
         _crcBypassActive = true;
+        StartCrcTimer();
+        L($"CRC bypass armed. ptr=0x{fnPtrAddr:X}, ret=0x{retAddr:X}");
+
+        // Preserve season-entity capture hook (used by SeasonChanger). Installed after the
+        // CRC bypass is armed so this .text modification is covered by the re-arm timer.
         InstallSeasonHook(bytes);
+    }
+
+    private void StartCrcTimer()
+    {
+        _crcTimer ??= new Timer(CrcTimerTick, null, 10_000, 10_000);
+    }
+
+    private void StopCrcTimer()
+    {
+        var t = _crcTimer;
+        _crcTimer = null;
+        try { t?.Dispose(); } catch { }
+    }
+
+    private void CrcTimerTick(object? _)
+    {
+        if (Interlocked.Exchange(ref _crcTimerRunning, 1) == 1) return;
+        try
+        {
+            lock (_lock)
+            {
+                if (!_crcBypassActive || _handle == IntPtr.Zero || _process?.HasExited != false) return;
+                try
+                {
+                    foreach (var det in _hooks.Values)
+                        WriteProtectedBytes(det.Address, det.Original);
+                    WriteUInt64(_crcFunctionPointerAddress, _crcOriginalPointer);
+                }
+                catch (Exception ex) { L($"CRC phase-1 (restore) failed: {ex.Message}"); return; }
+            }
+
+            Thread.Sleep(1000);
+
+            lock (_lock)
+            {
+                if (!_crcBypassActive || _handle == IntPtr.Zero || _process?.HasExited != false) return;
+                try
+                {
+                    WriteUInt64(_crcFunctionPointerAddress, _crcRetAddress);
+                    foreach (var det in _hooks.Values)
+                        WriteProtectedBytes(det.Address, det.Patch);
+                }
+                catch (Exception ex) { L($"CRC phase-2 (re-apply) failed: {ex.Message}"); }
+            }
+        }
+        catch (Exception ex) { L($"CRC tick uncaught: {ex.Message}"); }
+        finally { Interlocked.Exchange(ref _crcTimerRunning, 0); }
+    }
+
+    private void RestoreCrcPointer()
+    {
+        if (!_crcBypassActive || _crcFunctionPointerAddress == 0 || _crcOriginalPointer == 0 || _handle == IntPtr.Zero)
+            return;
+        try { WriteUInt64(_crcFunctionPointerAddress, _crcOriginalPointer); }
+        catch (Exception ex) { L($"CRC pointer restore failed: {ex.Message}"); }
+        _crcBypassActive = false;
     }
 
     /// <summary>
@@ -1059,6 +1147,21 @@ public sealed class RuntimeHookEngine : IDisposable
     {
         var pat = Pattern.Parse(sig);
         foreach (var o in Pattern.FindAll(data, pat, 1)) return o;
+        return -1;
+    }
+
+    /// <summary>
+    /// Finds the first signature match whose address lies in an executable region.
+    /// Used to locate a bare 0xC3 (ret) stub in .text for the CRC vtable swap.
+    /// </summary>
+    private int FindFirstExecutablePatternOffset(byte[] data, string sig)
+    {
+        var pat = Pattern.Parse(sig);
+        foreach (var o in Pattern.FindAll(data, pat, 4096))
+        {
+            if (IsExecutableAddress(_mainBase + (ulong)o))
+                return o;
+        }
         return -1;
     }
 

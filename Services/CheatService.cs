@@ -118,12 +118,19 @@ public sealed class CheatService : IDisposable
 
     public bool Apply(RuntimeProfileFeature feature, int value, bool enabled)
     {
-        // Hook-based profile cheats are DISABLED: they modify .text and crash FH6 (the game
-        // hashes its code section). Reported in #174 (game left in a bad state after a hook
-        // crash). Use the Memory Finder or Instant Rewards instead. Refuse to install any hook.
-        LastError = "Hook-based cheats are disabled — they crash FH6. Use Memory Finder or Instant Rewards.";
-        _log.Info($"Apply({feature}) refused — hooks disabled (crash risk).");
-        return false;
+        var name = feature.ToString();
+        if (!EnsureAttached()) return false;
+        _log.Info($"{name}: {(enabled ? "enabling" : "disabling")} @ {value}");
+        if (!_engine.ApplyProfile(feature, value, enabled, out var err))
+        {
+            LastError = err;
+            _log.Error($"{name} apply: {err}");
+            return false;
+        }
+        if (enabled) _active.Add(feature); else _active.Remove(feature);
+        _log.Info($"{name}: {(enabled ? "ENABLED" : "DISABLED")} OK");
+        LastError = null;
+        return true;
     }
 
     public bool UpdateValue(RuntimeProfileFeature feature, int value)
