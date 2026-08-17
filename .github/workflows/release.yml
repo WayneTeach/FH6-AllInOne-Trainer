@@ -1,0 +1,94 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 8.0.0)'
+        required: true
+        default: '8.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish self-contained executable
+        run: |
+          dotnet publish FH6Mod.csproj -c Release -r win-x64 --self-contained `
+            -p:PublishSingleFile=true `
+            -p:EnableCompressionInSingleFile=true `
+            -o publish
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: v${{ github.event.inputs.version }} — FH6 All-in-One Trainer
+          draft: false
+          prerelease: false
+          files: publish/FH6AllInOneTrainer.exe
+          body: |
+            ## FH6 All-in-One Trainer v${{ github.event.inputs.version }}
+
+            ### Self-Contained Windows x64 Executable
+
+            This release ships as a **single self-contained executable** — no .NET runtime installation required on the target machine.
+
+            ---
+
+            ### Platform
+            - **OS:** Windows x64
+            - **Framework:** .NET 10.0 (embedded)
+            - **Deployment:** Single-file, self-contained with compression
+
+            ### Key Features & Capabilities
+            - Code cave detours for live cheat injection
+            - SQL database access for game data manipulation
+            - Live cheat toggling via Avalonia-based UI
+            - Signature scanning (ForzaMods signatures)
+            - Material Icons Avalonia UI with Fluent theme
+            - Dependency injection & structured logging
+
+            ### Build Information
+            | Property | Value |
+            |---|---|
+            | Version | ${{ github.event.inputs.version }} |
+            | Target Framework | net10.0-windows |
+            | Runtime Identifier | win-x64 |
+            | Configuration | Release |
+            | Self-Contained | ✅ Yes |
+            | Single File | ✅ Yes |
+            | Compression | ✅ Enabled |
+            | Debug Info | Embedded |
+
+            ### Dependencies
+            | Package | Version |
+            |---|---|
+            | Avalonia | 12.1.1 |
+            | Avalonia.Desktop | 12.1.1 |
+            | Avalonia.Themes.Fluent | 12.1.1 |
+            | Avalonia.Fonts.Inter | 12.1.1 |
+            | CommunityToolkit.Mvvm | 8.4.2 |
+            | Material.Icons.Avalonia | 3.0.2 |
+            | Microsoft.Extensions.DependencyInjection | 10.0.10 |
+            | Microsoft.Extensions.Logging | 10.0.10 |
+            | Reloaded.Memory | 9.4.3 |
+            | Reloaded.Memory.Sigscan | 3.1.9 |
+
+            ### Credits
+            - **UI:** Chaarkor
+            - **Cheats:** paris's club
+            - **Signatures:** ForzaMods
+            - **Author:** changcheng967
