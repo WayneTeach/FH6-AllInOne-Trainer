@@ -7,6 +7,9 @@ on:
         description: 'Release version (e.g. 8.0.0)'
         required: true
         default: '8.0.0'
+  push:
+    branches:
+      - 'copilot/create-github-release-8-0-0'
 
 permissions:
   contents: write
@@ -34,13 +37,13 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.event.inputs.version }}
-          name: v${{ github.event.inputs.version }} — FH6 All-in-One Trainer
+          tag_name: v${{ github.event.inputs.version || '8.0.0' }}
+          name: v${{ github.event.inputs.version || '8.0.0' }} — FH6 All-in-One Trainer
           draft: false
           prerelease: false
           files: publish/FH6AllInOneTrainer.exe
           body: |
-            ## FH6 All-in-One Trainer v${{ github.event.inputs.version }}
+            ## FH6 All-in-One Trainer v${{ github.event.inputs.version || '8.0.0' }}
 
             ### Self-Contained Windows x64 Executable
 
@@ -64,7 +67,7 @@ jobs:
             ### Build Information
             | Property | Value |
             |---|---|
-            | Version | ${{ github.event.inputs.version }} |
+            | Version | ${{ github.event.inputs.version || '8.0.0' }} |
             | Target Framework | net10.0-windows |
             | Runtime Identifier | win-x64 |
             | Configuration | Release |
